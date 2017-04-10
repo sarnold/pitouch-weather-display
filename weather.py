@@ -25,13 +25,14 @@
 #OTHER DEALINGS IN THE SOFTWARE.
 ### END LICENSE
 
-""" Fetches weather reports Weather.com for display on small screens."""
+""" Fetches weather data from Weather.com for display on small screens."""
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 ###############################################################################
 #   Raspberry Pi Weather Display
 #	By: Jim Kemp	10/25/2014
+#   PiTouch display hacks by: Steve Arnold  04/09/2017
 ###############################################################################
 import os
 import pygame
@@ -46,7 +47,7 @@ import pywapi
 import string
 
 from icon_defs import *
-from X10 import *
+#from X10 import *
 
 # Setup GPIO pin BCM GPIO04
 import RPi.GPIO as GPIO
@@ -125,7 +126,7 @@ class SmDisplay:
 
 		# Larger Display
 		self.xmax = 800 - 35
-		self.ymax = 600 - 5
+		self.ymax = 480 - 5
 		self.scaleIcon = True		# Weather icons need scaling.
 		self.iconScale = 1.5		# Icon scale amount.
 		self.subwinTh = 0.05		# Sub window text height
@@ -786,7 +787,7 @@ while running:
 	# Automatically switch back to weather display after a couple minutes.
 	if mode != 'w':
 		dispTO += 1
-		if dispTO > 3000:	# Five minute timeout at 100ms loop rate.
+		if dispTO > 565:	# One minute timeout at 100ms loop rate.
 			mode = 'w'
 	else:
 		dispTO = 0
@@ -807,8 +808,10 @@ while running:
 			#ser.write( "Weather\r\n" )
 		# Once the screen is updated, we have a full second to get the weather.
 		# Once per minute, update the weather from the net.
-		if ( s == 0 ):
+		if ( int(s) == 0 ):
 			myDisp.UpdateWeather()
+			# switch between 'h' and 'w'
+			mode = 'h'
 
 	if ( mode == 'h'):
 		# Pace the screen updates to once per second.
@@ -826,7 +829,8 @@ while running:
 			# Stat Screen Display.
 			myDisp.disp_help( inDaylight, dayHrs, dayMins, tDaylight, tDarkness )
 		# Refresh the weather data once per minute.
-		if ( int(s) == 0 ): myDisp.UpdateWeather()
+		if ( int(s) == 0 ):
+			myDisp.UpdateWeather()
 
 	( inDaylight, dayHrs, dayMins, tDaylight, tDarkness) = Daylight( myDisp.sunrise, myDisp.sunset )
 
