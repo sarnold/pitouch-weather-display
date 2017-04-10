@@ -57,7 +57,7 @@ GPIO.setup( 17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN )	# Shutdown
 
 mouseX, mouseY = 0, 0
 mode = 'w'		# Default to weather mode.
-
+dim_enable = True
 
 ###############################################################################
 def getIcon( w, i ):
@@ -69,9 +69,10 @@ def getIcon( w, i ):
 # Small LCD Display.
 class SmDisplay:
 	screen = None;
-	
+
 	####################################################################
-	def __init__(self):
+	def __init__(self, keepalive=0):
+		self.keepalive = keepalive
 		"Ininitializes a new pygame screen using the framebuffer"
 		# Based on "Python GUI in Linux frame buffer"
 		# http://www.karoltomala.com/blog/?p=679
@@ -101,13 +102,19 @@ class SmDisplay:
 		size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
 		print "Framebuffer Size: %d x %d" % (size[0], size[1])
 		self.screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
+		if self.keepalive:
+			self.buffer = pygame.Surface(pygame.display.get_surface().get_size())
+		else:
+			self.buffer = None
+
 		# Clear the screen to start
-		self.screen.fill((0, 0, 0))        
+		self.screen.fill((0, 0, 0))
 		# Initialise font support
 		pygame.font.init()
 		# Render the screen
 		pygame.mouse.set_visible(0)
 		pygame.display.update()
+
 		#for fontname in pygame.font.get_fonts():
 		#        print fontname
 		self.temp = ''
@@ -148,12 +155,34 @@ class SmDisplay:
 		self.tmdateYPosSm = 8		# Time & Date Y Position Small
 		"""
 
+	def dim(self, darken_factor=64, color_filter=(0,0,0)):
+		if not self.keepalive:
+			self.buffer = pygame.Surface(pygame.display.get_surface().get_size())
+		self.buffer.blit(pygame.display.get_surface(),(0,0))
+		if darken_factor > 0:
+			darken=pygame.Surface(pygame.display.get_surface().get_size())
+			darken.fill(color_filter)
+			darken.set_alpha(darken_factor)
+			# safe old clipping rectangle...
+			old_clip = pygame.display.get_surface().get_clip()
+			# ..blit over entire screen...
+			pygame.display.get_surface().blit(darken,(0,0))
+			pygame.display.flip()
+			# ... and restore clipping
+			pygame.display.get_surface().set_clip(old_clip)
 
+	def undim(self):
+		if self.buffer:
+			pygame.display.get_surface().blit(self.buffer,(0,0))
+			pygame.display.flip()
+			if not self.keepalive:
+				self.buffer=None
 
 
 	####################################################################
 	def __del__(self):
 		"Destructor to make sure pygame shuts down, etc."
+
 
 	####################################################################
 	def UpdateWeather( self ):
@@ -162,7 +191,7 @@ class SmDisplay:
 		f = 'forecasts'
 
 		# This is where the majic happens. 
-		self.w = pywapi.get_weather_from_weather_com( '48085', units='imperial' )
+		self.w = pywapi.get_weather_from_weather_com( '93455', units='imperial' )
 		w = self.w
 		try:
 			if ( w[cc]['last_updated'] != self.wLastUpdate ):
@@ -211,13 +240,13 @@ class SmDisplay:
 			return False
 		#except ValueError:
 		#	print "ValueError -> Weather Error"
-		
+
 		return True
 
 
 
 	####################################################################
-	def disp_weather(self):
+	def disp_weather(self, inDaylight):
 		# Fill the screen with black
 		self.screen.fill( (0,0,0) )
 		xmin = 10
@@ -419,6 +448,9 @@ class SmDisplay:
 			yo = 0
 		self.screen.blit( icon, (xmax*wx*7-ix/2,ymax*(wy+gp*1.2)+yo) )
 
+		if dim_enable:
+			if not inDaylight:
+				self.dim(darken_factor=192, color_filter=(0,0,0))
 		# Update the display
 		pygame.display.update()
 
@@ -558,6 +590,10 @@ class SmDisplay:
 
 		s = "Visability %smi" % self.vis
 		self.sPrint( s, sfont, xmax*0.05, 10, lc )
+
+		if dim_enable:
+			if not inDaylight:
+				self.dim(darken_factor=192, color_filter=(0,0,0))
 
 		# Update the display
 		pygame.display.update()
@@ -701,7 +737,8 @@ if serActive:
 mode = 'w'		# Default to weather mode.
 
 # Create an instance of the lcd display class.
-myDisp = SmDisplay()
+myDisp = SmDisplay(keepalive=1)
+#myDisp.dim(darken_factor=64, color_filter=(0,0,0))
 
 running = True		# Stay running while True
 s = 0			# Seconds Placeholder to pace display.
@@ -804,7 +841,10 @@ while running:
 		# Update / Refresh the display after each second.
 		if ( s != time.localtime().tm_sec ):
 			s = time.localtime().tm_sec
-			myDisp.disp_weather()	
+
+			( inDaylight, dayHrs, dayMins, tDaylight, tDarkness) = Daylight( myDisp.sunrise, myDisp.sunset )
+
+			myDisp.disp_weather(inDaylight)
 			#ser.write( "Weather\r\n" )
 		# Once the screen is updated, we have a full second to get the weather.
 		# Once per minute, update the weather from the net.
