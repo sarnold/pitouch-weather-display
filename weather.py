@@ -191,7 +191,7 @@ class SmDisplay:
 		f = 'forecasts'
 
 		# This is where the majic happens. 
-		self.w = pywapi.get_weather_from_weather_com( '93455', units='imperial' )
+		self.w = pywapi.get_weather_from_weather_com( '48085', units='imperial' )
 		w = self.w
 		try:
 			if ( w[cc]['last_updated'] != self.wLastUpdate ):
