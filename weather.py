@@ -37,7 +37,8 @@ GPIO.setup( 17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN )	# Shutdown
 
 mouseX, mouseY = 0, 0
 mode = 'w'		# Default to weather mode.
-dim_enable = True
+dim_enable = False
+backlight_control = True
 
 ###############################################################################
 def getIcon( w, i ):
@@ -157,6 +158,12 @@ class SmDisplay:
 			pygame.display.flip()
 			if not self.keepalive:
 				self.buffer=None
+
+	def set_backlight(self):
+		if inDaylight:
+			os.system("rpi-backlight max")
+		else:
+			os.system("rpi-backlight min")
 
 
 	####################################################################
@@ -431,6 +438,9 @@ class SmDisplay:
 		if dim_enable:
 			if not inDaylight:
 				self.dim(darken_factor=192, color_filter=(0,0,0))
+		elif backlight_control:
+			self.set_backlight()
+
 		# Update the display
 		pygame.display.update()
 
