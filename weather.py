@@ -1,29 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-### BEGIN LICENSE
-#Copyright (c) 2014 Jim Kemp <kemp.jim@gmail.com>
-
-#Permission is hereby granted, free of charge, to any person
-#obtaining a copy of this software and associated documentation
-#files (the "Software"), to deal in the Software without
-#restriction, including without limitation the rights to use,
-#copy, modify, merge, publish, distribute, sublicense, and/or sell
-#copies of the Software, and to permit persons to whom the
-#Software is furnished to do so, subject to the following
-#conditions:
-
-#The above copyright notice and this permission notice shall be
-#included in all copies or substantial portions of the Software.
-
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-#EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-#OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-#NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-#HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-#WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-#OTHER DEALINGS IN THE SOFTWARE.
-### END LICENSE
+### See LICENSE and AUTHORS for details
+# Copyright (c) 2017 Stephen Arnold <stephen.arnold42@gmail.com>
+# Copyright (c) 2014 Jim Kemp <kemp.jim@gmail.com>
 
 """ Fetches weather data from Weather.com for display on small screens."""
 
@@ -41,13 +20,14 @@ import datetime
 import random
 from pygame.locals import *
 import calendar
-import serial
 
 import pywapi
 import string
 
 from icon_defs import *
+#import serial
 #from X10 import *
+
 
 # Setup GPIO pin BCM GPIO04
 import RPi.GPIO as GPIO
@@ -190,13 +170,13 @@ class SmDisplay:
 		cc = 'current_conditions'
 		f = 'forecasts'
 
-		# This is where the majic happens. 
-		self.w = pywapi.get_weather_from_weather_com( '48085', units='imperial' )
+		# This is where the magic happens. 
+		self.w = pywapi.get_weather_from_weather_com( '93455', units='imperial' )
 		w = self.w
 		try:
 			if ( w[cc]['last_updated'] != self.wLastUpdate ):
 				self.wLastUpdate = w[cc]['last_updated']
-				print "New Weather Update: " + self.wLastUpdate
+				print "Last Weather Update: " + self.wLastUpdate
 				self.temp = string.lower( w[cc]['temperature'] )
 				self.feels_like = string.lower( w[cc]['feels_like'] )
 				self.wind_speed = string.lower( w[cc]['wind']['speed'] )
