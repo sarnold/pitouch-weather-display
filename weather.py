@@ -24,7 +24,6 @@ import pywapi
 import string
 # new lib dependencies - SLA
 import sys
-import shlex
 import signal
 import schedule
 import subprocess
@@ -50,7 +49,7 @@ data_refresh = 15
 backlight_control = True
 
 # enable display gamma dimming
-extra_dim = True
+extra_dim = False
 dim_delay = 60
 darken_value = 192
 
@@ -308,7 +307,7 @@ class SmDisplay:
         th =     self.subwinTh        # Text Height
         rpth =     0.100            # Rain Present Text Height
         gp =     0.065            # Line Spacing Gap
-        ro =     0.010 * xmax       # "Rain:" Text Window Offset winthin window. 
+        ro =     0.010 * xmax       # "Rain:" Text Window Offset within window. 
         rpl =    5.95            # Rain percent line offset.
 
         font = pygame.font.SysFont( fn, int(ymax*th), bold=1 )
@@ -454,7 +453,7 @@ class SmDisplay:
         # Conditions
         ys = 0.20        # Yaxis Start Pos
         xs = 0.20        # Xaxis Start Pos
-        gp = 0.075    # Line Spacing Gap
+        gp = 0.075       # Line Spacing Gap
         th = 0.05        # Text Height
 
         #cal = calendar.TextCalendar()
@@ -498,12 +497,12 @@ class SmDisplay:
         sh = self.tmdateSmTh    # Small Text Height
 
         # Time & Date
-        font = pygame.font.SysFont( fn, int(ymax*thl), bold=1 )        # Regular Font
-        sfont = pygame.font.SysFont( fn, int(ymax*sh), bold=1 )        # Small Font
+        font = pygame.font.SysFont( fn, int(ymax*thl), bold=1 )  # Regular Font
+        sfont = pygame.font.SysFont( fn, int(ymax*sh), bold=1 )  # Small Font
 
-        tm1 = time.strftime( "%a, %b %d   %I:%M", time.localtime() )    # 1st part
-        tm2 = time.strftime( "%S", time.localtime() )            # 2nd
-        tm3 = time.strftime( " %P", time.localtime() )            # 
+        tm1 = time.strftime( "%a, %b %d   %I:%M", time.localtime() )  # 1st part
+        tm2 = time.strftime( "%S", time.localtime() )                 # 2nd
+        tm3 = time.strftime( " %P", time.localtime() )                # 3rd
 
         rtm1 = font.render( tm1, True, lc )
         (tx1,ty1) = rtm1.get_size()
@@ -687,9 +686,11 @@ def Daylight( sr, st ):
 
     # Compute the delta time (in seconds) between sunrise and set.
     dDaySec = tSunset - tSunrise        # timedelta in seconds
-    (dayHrs, dayMin) = stot( dDaySec )    # split into hours and minutes.
+    (dayHrs, dayMin) = stot( dDaySec )  # split into hours and minutes.
 
-    return ( inDaylight, dayHrs, dayMin, tDaylight, tDarkness, tSunrise, tSunset )
+    return (inDaylight, dayHrs, dayMin,
+            tDaylight, tDarkness,
+            tSunrise, tSunset)
 
 
 ############################################################################
@@ -801,9 +802,9 @@ if GPIO.input( 17 ):
     while GPIO.input( 17 ): pygame.time.wait(100)
 
 
-running = True      # Stay running while True
-s = 0               # Seconds Placeholder to pace display.
-dispTO = 0          # Display timeout to automatically switch back to weather display.
+running = True  # Stay running while True
+s = 0           # Seconds Placeholder to pace display.
+dispTO = 0      # Display timeout to automatically switch back to weather display.
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 try:
