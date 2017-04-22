@@ -11,20 +11,23 @@ http://www.instructables.com/id/Raspberry-Pi-Internet-Weather-Station/step4/Sour
 Dependencies
 ============
 
-Python::
+Python:
 
-  pywapi
-  pygame
+* pywapi - https://pypi.python.org/pypi/pywapi
+* schedule - https://pypi.python.org/pypi/schedule
+* pygame - https://pypi.python.org/pypi/Pygame
 
-For buttons and usb-serial X10 interface::
+If there is no deb package for any of the above, try "pip install [package_name]".
 
-  RPi.GPIO
-  python-serial
-  and (possibly) wiringpi
+Also, for buttons and usb-serial X10 interfaces:
 
-For rpi-backlight control::
+* RPi.GPIO (should already be installed in Raspbian)
+* python-serial
+* and (possibly) wiringpi
 
-  rpi-backlight
+For rpi-backlight control:
+
+* rpi-backlight
 
 The rpi-backlight tool is available either via deb package or manual build/install;
 see `the rpi-backlight github repo`_ and the `deb package build howto`_ for details.
@@ -42,7 +45,8 @@ build dependencies, clone the repo, cd and run the build command, then install i
   $ debuild -b -uc -us
   $ sudo dpkg -i ../rpi-backlight_0.0.1-1-raspbian+1_armhf.deb
 
-.. note:: rpi-backlight only works with the Pi Foundation touch display
+.. note:: rpi-backlight only works with the Pi Foundation touch display:
+          https://www.raspberrypi.org/products/raspberry-pi-touch-display/
 
 Comment out the X10 import (and pyserial) to run just the weather interface.
 
