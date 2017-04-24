@@ -11,7 +11,8 @@ __version__ = "0.1.0"
 ###############################################################################
 #   Raspberry Pi Weather Display
 #    By: Jim Kemp    10/25/2014
-#   PiTouch display hacks by: Steve Arnold  04/09/2017
+#   PiTouch display hacks and schedulers
+#    by: Steve Arnold  04/23/2017
 ###############################################################################
 import os
 import pygame
@@ -32,7 +33,6 @@ from icon_defs import *
 #import serial
 #from X10 import *
 
-
 # Setup GPIO pin BCM GPIO04
 import RPi.GPIO as GPIO
 GPIO.setmode( GPIO.BCM )
@@ -40,10 +40,12 @@ GPIO.setup( 4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN )    # Next
 GPIO.setup( 17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN )    # Shutdown
 
 mouseX, mouseY = 0, 0
+LEFT = True
 mode = 'w'        # Default to weather mode.
 
 # data refresh rate in minutes
 data_refresh = 15
+
 # enable backlight control for Pi Foundation display
 # (note that extra_dim depends on backlight_control)
 backlight_control = True
@@ -63,7 +65,6 @@ def getIcon( w, i ):
 # Small LCD Display.
 class SmDisplay:
     screen = None;
-
 
     ####################################################################
     def __init__(self, keepalive=0):
@@ -111,7 +112,7 @@ class SmDisplay:
         pygame.display.update()
 
         #for fontname in pygame.font.get_fonts():
-        #        print fontname
+        #    print fontname
         self.temp = ''
         self.feels_like = 0
         self.wind_speed = 0
@@ -129,12 +130,12 @@ class SmDisplay:
         # Larger Display
         self.xmax = 800 - 35
         self.ymax = 480 - 5
-        self.scaleIcon = True        # Weather icons need scaling.
-        self.iconScale = 1.5        # Icon scale amount.
-        self.subwinTh = 0.05        # Sub window text height
-        self.tmdateTh = 0.100        # Time & Date Text Height
+        self.scaleIcon = True         # Weather icons need scaling.
+        self.iconScale = 1.5          # Icon scale amount.
+        self.subwinTh = 0.05          # Sub window text height
+        self.tmdateTh = 0.100         # Time & Date Text Height
         self.tmdateSmTh = 0.06
-        self.tmdateYPos = 10        # Time & Date Y Position
+        self.tmdateYPos = 10          # Time & Date Y Position
         self.tmdateYPosSm = 18        # Time & Date Y Position Small
 
         """
@@ -199,6 +200,26 @@ class SmDisplay:
 
 
     ####################################################################
+    def backlight_up(self):
+        try:
+            retcode = subprocess.call(["rpi-backlight", "up"])
+            if retcode < 0:
+                print >>sys.stderr, "Child process terminated:", -retcode
+        except OSError as err:
+            print >>sys.stderr, "Execution failed:", err
+
+
+    ####################################################################
+    def backlight_down(self):
+        try:
+            retcode = subprocess.call(["rpi-backlight", "down"])
+            if retcode < 0:
+                print >>sys.stderr, "Child process terminated:", -retcode
+        except OSError as err:
+            print >>sys.stderr, "Execution failed:", err
+
+
+    ####################################################################
     def __del__(self):
         "Destructor to make sure pygame shuts down, etc."
 
@@ -228,12 +249,12 @@ class SmDisplay:
         # Time & Date
         th = self.tmdateTh
         sh = self.tmdateSmTh
-        font = pygame.font.SysFont( fn, int(ymax*th), bold=1 )    # Regular Font
+        font = pygame.font.SysFont( fn, int(ymax*th), bold=1 )     # Regular Font
         sfont = pygame.font.SysFont( fn, int(ymax*sh), bold=1 )    # Small Font for Seconds
 
         tm1 = time.strftime( "%a, %b %d   %I:%M", time.localtime() )    # 1st part
-        tm2 = time.strftime( "%S", time.localtime() )                    # 2nd
-        tm3 = time.strftime( " %P", time.localtime() )                    # 
+        tm2 = time.strftime( "%S", time.localtime() )                   # 2nd
+        tm3 = time.strftime( " %P", time.localtime() )                  # 
 
         rtm1 = font.render( tm1, True, lc )
         (tx1,ty1) = rtm1.get_size()
@@ -304,11 +325,11 @@ class SmDisplay:
 
         wx =     0.125            # Sub Window Centers
         wy =     0.510            # Sub Windows Yaxis Start
-        th =     self.subwinTh        # Text Height
-        rpth =     0.100            # Rain Present Text Height
+        th =     self.subwinTh    # Text Height
+        rpth =   0.100            # Rain Present Text Height
         gp =     0.065            # Line Spacing Gap
-        ro =     0.010 * xmax       # "Rain:" Text Window Offset within window. 
-        rpl =    5.95            # Rain percent line offset.
+        ro =     0.010 * xmax     # "Rain:" Text Window Offset within window. 
+        rpl =    5.95             # Rain percent line offset.
 
         font = pygame.font.SysFont( fn, int(ymax*th), bold=1 )
         rpfont = pygame.font.SysFont( fn, int(ymax*rpth), bold=1 )
@@ -635,14 +656,15 @@ def sigpipe_fix():
 # words, return true if it's daytime and the sun is up. Also, return the 
 # number of hours:minutes of daylight in this day. Lastly, return the number
 # of seconds until daybreak and sunset. If it's dark, daybreak is set to the 
-# number of seconds until sunrise. If it daytime, sunset is set to the number 
+# number of seconds until sunrise. If it's daytime, sunset is set to the number
 # of seconds until the sun sets.
 # 
 # So, five things are returned as:
 #  ( InDaylight, Hours, Minutes, secToSun, secToDark).
 # 
 # SLA - 04/22/2017 - Make that seven things
-#    Add sunrise and sunset time obkects for shceduling
+#    Add sunrise and sunset time objects for scheduling
+#    (where tSunset is the time *of* sunset, same for tSunrise)
 ############################################################################
 def Daylight( sr, st ):
     inDaylight = False    # Default return code.
@@ -724,7 +746,7 @@ if serActive:
     ser.write( chr(0x8b) )    # Querry Status
     c = ser.read( 1 )    # Wait for something from the CM11A.
 
-    # If an attached CM11A sends a 0xA5 then it requirs a clock reset.
+    # If an attached CM11A sends a 0xA5 then it requires a clock reset.
     if (len(c) == 1):
         if (ord(c) == 0xA5):
             X10_SetClock( ser )
@@ -762,7 +784,7 @@ else:
     # retreive WX data and set the update scheduler
     myDisp.UpdateWeather()
     schedule.every(data_refresh).minutes.do(myDisp.UpdateWeather)
-    # calculate and format times for display dimming
+    # retrieve and format times for display dimming
     #  note scheduler times must be a string with format HH:MM
     (inDaylight, dayHrs, dayMins, tDaylight, tDarkness, tSunrise, tSunset) = Daylight(myDisp.sunrise, myDisp.sunset)
     riseTime = tSunrise.strftime('%H:%M')
@@ -775,6 +797,8 @@ else:
         schedule.every().day.at(setTime).do(myDisp.backlight_min)
         if not inDaylight:
             myDisp.backlight_min()
+        else:
+            myDisp.backlight_max()
         # TODO fix dimming so it runs during display loop
         if extra_dim:
             schedule.every().day.at(riseTime).do(myDisp.undim)
@@ -802,13 +826,16 @@ if GPIO.input( 17 ):
     while GPIO.input( 17 ): pygame.time.wait(100)
 
 
-running = True  # Stay running while True
-s = 0           # Seconds Placeholder to pace display.
-dispTO = 0      # Display timeout to automatically switch back to weather display.
+firstClick = None  # set default for double-tap
+running = True      # Stay running while True
+s = None            # Seconds Placeholder to pace display.
+dispTO = 0          # Display timeout to automatically switch back to weather
+                    # display.
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 try:
     while running:
+
         # start data update and display scheduler
         schedule.run_pending()
 
@@ -841,6 +868,14 @@ try:
                 if (( event.key == K_KP_ENTER ) or (event.key == K_q)):
                     running = False
 
+                # brighten backlight by 10 percent on keypad '+' or 'u' key
+                elif (( event.key == K_KP_PLUS ) or (event.key == K_u)):
+                    myDisp.backlight_up()
+
+                # dim backlight by 10 percent on keypad '-' or 'd' key
+                elif (( event.key == K_KP_MINUS ) or (event.key == K_d)):
+                    myDisp.backlight_down()
+
                 # On 'c' key, set mode to 'calendar'.
                 elif ( event.key == K_c ):
                     mode = 'c'
@@ -859,6 +894,18 @@ try:
                 elif ( event.key == K_h ):
                     mode = 'h'
                     dispTO = 0
+
+            # keep track of screen tap (mouse click) for 500 ms so we
+            # recognize a double-tap to quit (delay is printed below)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if firstClick:
+                    print "Click delay %d ms" % (pygame.time.get_ticks() - firstClick)
+                    running = False    # Quit on double-click
+                else:
+                    firstClick = pygame.time.get_ticks()
+
+            if firstClick and (pygame.time.get_ticks() - firstClick) > 500:
+                firstClick = None
 
         # Automatically switch between weather display and help display
         if mode != 'w':
@@ -930,12 +977,13 @@ try:
 
 except KeyboardInterrupt:
     print("")
-    print("Clearing job queue and restoring display to full backlight")
+    print("Clearing job queue and restoring display")
     schedule.clear()
     if backlight_control:
-        myDisp.backlight_max
-        if extra_dim:
-            myDisp.undim()
+        if inDaylight:
+            subprocess.call(["rpi-backlight", "max"])
+        else:
+            subprocess.call(["rpi-backlight", "min"])
 
 finally:
     pygame.quit()
