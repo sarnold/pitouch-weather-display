@@ -49,6 +49,9 @@ data_refresh = 15
 # enable backlight control for Pi Foundation display
 # (note that extra_dim depends on backlight_control)
 backlight_control = True
+if backlight_control:
+    # select tap mode, either exit or backlight on/off
+    tap_mode = "backlight"
 
 # enable display gamma dimming
 extra_dim = False
@@ -177,6 +180,26 @@ class SmDisplay:
             pygame.display.flip()
             if not self.keepalive:
                 self.buffer=None
+
+
+    ####################################################################
+    def backlight_off(self):
+        try:
+            retcode = subprocess.call(["rpi-backlight", "off"])
+            if retcode < 0:
+                print >>sys.stderr, "Child process terminated:", -retcode
+        except OSError as err:
+            print >>sys.stderr, "Execution failed:", err
+
+
+    ####################################################################
+    def backlight_on(self):
+        try:
+            retcode = subprocess.call(["rpi-backlight", "on"])
+            if retcode < 0:
+                print >>sys.stderr, "Child process terminated:", -retcode
+        except OSError as err:
+            print >>sys.stderr, "Execution failed:", err
 
 
     ####################################################################
@@ -826,7 +849,7 @@ if GPIO.input( 17 ):
     while GPIO.input( 17 ): pygame.time.wait(100)
 
 
-firstClick = None  # set default for double-tap
+firstClick = None   # set default for double-tap
 running = True      # Stay running while True
 s = None            # Seconds Placeholder to pace display.
 dispTO = 0          # Display timeout to automatically switch back to weather
@@ -897,15 +920,22 @@ try:
 
             # keep track of screen tap (mouse click) for 500 ms so we
             # recognize a double-tap to quit (delay is printed below)
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 if firstClick:
-                    print "Click delay %d ms" % (pygame.time.get_ticks() - firstClick)
-                    running = False    # Quit on double-click
+                    #print "Click delay %d ms" % (pygame.time.get_ticks() - firstClick)
+                    if tap_mode == "backlight":
+                        myDisp.backlight_off()
+                    else:
+                        running = False    # Quit on double-click
                 else:
                     firstClick = pygame.time.get_ticks()
 
             if firstClick and (pygame.time.get_ticks() - firstClick) > 500:
-                firstClick = None
+                if tap_mode == "backlight":
+                    myDisp.backlight_on()
+                    firstClick = None
+                else:
+                    firstClick = None
 
         # Automatically switch between weather display and help display
         if mode != 'w':
