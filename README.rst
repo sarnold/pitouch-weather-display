@@ -1,6 +1,6 @@
-========================================================
- Weather - A PyGame-based weather data/forecast display
-========================================================
+===========================================================
+ Weather.py - A PyGame-based weather data/forecast display
+===========================================================
 
 Original code written by Jim Kemp http://www.ph-elec.com/
 
@@ -23,9 +23,85 @@ Also, for buttons and usb-serial X10 interfaces:
 
 * RPi.GPIO (should already be installed in Raspbian)
 * python-serial
-* and (possibly) wiringpi
 
-For rpi-backlight control:
+The Basics
+==========
+
+The old behavior (see legacy branch) was to stay on the weather display all
+the time; using the keyboard to switch displays would automatically switch
+back to the weather display after five minutes.  The new behavior is to
+switch between the weather and site-info displays once each minute (nominal).
+
+The site-info (help) display starts on the minute and then waits for approx. one
+minute to switch.  The weather data lookup is now run via scheduler (instead
+of being tied to the one-minute display cycle) and defaults to 15 minutes
+(since external observations are hourly).
+
+The code still supports GPIO buttons (eg, for a small PiTFT display) but the
+X-10 serial interface is commented out.
+
+The code requires a network interface for time and weather data sync (currently
+uses weather.com).  On the updated master branch, set backlight_control to False
+if you don't want the display to dim during non-daylight hours. Use legacy branch
+if you want the original behavior.
+
+To Localize
+===========
+
+Edit weather.py and change the following as needed:
+
+* Zip code in UpdateWeather function
+* Display size depending on your display (see comments)
+* backlight_control and tap_mode
+
+To run from a console
+=====================
+
+Change to Weather source directory and run the command::
+
+  $ DISPLAY=:0 python weather.py
+
+To run in the background with logging, try::
+
+  DISPLAY=:0 python -u weather.py > >(tee -a out.log) 2> >(tee err.log >&2) &
+
+
+Keyboard and Touch Controls
+===========================
+
+The main keyboard and touch controls only depend on pygame, however, if
+backlight_control is enabled, touch_mode="backlight" depends on the
+rpi-backlight tool (see below).  If you don't have the required display
+hardware, set backlight_control="False".
+
+* Keyboard controls
+
+  * q or keypad Enter - quit program
+  * u or keypad '+' - raise backlight 10%
+  * d or keypad '-' - lower backlight 10%
+  * c - switch to calendar display
+  * w - switch to weather display
+  * h - switch to site info display
+
+* Touch / Click controls
+
+  * tap_mode unset
+
+    * double-tap - quit program
+    * single-tap - does nothing
+
+  * tap_mode="backlight"
+
+    * double-tap - turn backlight off
+    * single-tap - turn backlight on
+
+.. note:: The backlight min/max commands are controlled by schedulers
+          according to sunrise/sunset.
+
+Pi Foundation Touch Display
+===========================
+
+For rpi-backlight control on this display, install
 
 * rpi-backlight
 
@@ -47,33 +123,5 @@ build dependencies, clone the repo, cd and run the build command, then install i
 
 .. note:: rpi-backlight only works with the Pi Foundation touch display:
           https://www.raspberrypi.org/products/raspberry-pi-touch-display/
-
-Comment out the X10 import (and pyserial) to run just the weather interface.
-
-Also requires a network interface for time and weather data sync (currently
-uses weather.com).  On the updated master branch, set backlight_control to False
-if you don't want the display to dim during nightime hours. The flip period
-is currently one minute (to match the weather mode refresh) and is not really
-that flexible without refactoring the timing of display refresh and data
-lookup.  Use legacy branch if you want the original behavior.
-
-To Localize
-===========
-
-Edit weather.py and change the following as needed:
-
-* Zip code in UpdateWeather function
-* Display size depending on your display (see comments)
-
-To run from a console
-=====================
-
-Change to Weather source diectory and run the command::
-
-  $ DISPLAY=:0 python weather.py
-
-To run in the backgound with logging, try::
-
-  DISPLAY=:0 python -u weather.py > >(tee -a out.log) 2> >(tee err.log >&2) &
 
 
