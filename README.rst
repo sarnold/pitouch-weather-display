@@ -2,11 +2,11 @@
  Weather.py - A PyGame-based weather data/forecast display
 ===========================================================
 
-Original code written by Jim Kemp http://www.ph-elec.com/
+Original code written by Jim Kemp http://www.ph-elec.com/ and downloaded
+from: http://www.instructables.com/id/Raspberry-Pi-Internet-Weather-Station/step4/Source-Code/
 
-Downloaded from:
-
-http://www.instructables.com/id/Raspberry-Pi-Internet-Weather-Station/step4/Source-Code/
+Scheduler, backlight, and display adjustments by Stephen Arnold.  Note the
+legacy branch contains the original code.
 
 Dependencies
 ============
@@ -59,11 +59,17 @@ To run from a console
 
 Change to Weather source directory and run the command::
 
-  $ DISPLAY=:0 python weather.py
+  $ sudo DISPLAY=:0 python weather.py
 
 To run in the background with logging, try::
 
-  DISPLAY=:0 python -u weather.py > >(tee -a out.log) 2> >(tee err.log >&2) &
+  $ sudo DISPLAY=:0 python -u weather.py > >(tee -a out.log) 2> >(tee err.log >&2) &
+
+.. note:: On Raspbian at least, sudo is required to access the framebuffer;
+          even after adding the pi user to the video group, the following
+          exception is raised without sudo.
+          
+          ``Exception: No suitable video driver found!``
 
 
 Keyboard and Touch Controls
