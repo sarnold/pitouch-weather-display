@@ -63,8 +63,11 @@ Change to Weather source directory and run the command::
 
 To run in the background with logging, try::
 
-  DISPLAY=:0 python -u weather.py > >(tee -a out.log) 2> >(tee err.log >&2) &
+  $ DISPLAY=:0 python -u weather.py > >(tee -a out.log) 2> >(tee err.log >&2) &
 
+
+.. note: If not running x11, you may need to prefix the above commands with
+         "sudo" to access the framebuffer.
 
 Keyboard and Touch Controls
 ===========================
